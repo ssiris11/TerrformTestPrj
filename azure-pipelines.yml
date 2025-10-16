@@ -1,101 +1,77 @@
-trigger:
-  branches:
-    include:
+name: Terraform Infra CI/CD
+
+on:
+  push:
+    branches:
       - main
-  paths:
-    include:
-      - terraform-aks/**
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
-variables:
-  terraformVersion: '1.6.6'
-  workingDir: 'terraform-aks'
+permissions:
+  id-token: write    # Required for OIDC login to Azure
+  contents: read
 
-stages:
-# =====================================
-# STAGE 1: Terraform Plan (CI)
-# =====================================
-- stage: Plan
-  displayName: "Terraform Plan"
-  jobs:
-    - job: plan
-      displayName: "Terraform Plan"
-      pool:
-        vmImage: 'ubuntu-latest'
+env:
+  TF_VERSION: 1.6.6
+  WORKING_DIR: .
 
-      steps:
-        - checkout: self
+jobs:
+  terraform:
+    name: Terraform Plan/Apply
+    runs-on: ubuntu-latest
 
-        - task: TerraformInstaller@1
-          displayName: "Install Terraform"
-          inputs:
-            terraformVersion: $(terraformVersion)
+    steps:
+      # Step 1️⃣ Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        - task: AzureCLI@2
-          displayName: "Terraform Init & Plan"
-          inputs:
-            azureSubscription: 'My-Azure-Service-Connection'   # 👈 your service connection name
-            scriptType: bash
-            scriptLocation: inlineScript
-            workingDirectory: $(workingDir)
-            inlineScript: |
-              echo "Initializing Terraform backend..."
-              terraform init -input=false
-              
-              echo "Validating Terraform code..."
-              terraform validate
+      # Step 2️⃣ Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
-              echo "Generating Terraform plan..."
-              terraform plan -out=tfplan.binary -input=false
-              
-              terraform show -no-color tfplan.binary > tfplan.txt
+      # Step 3️⃣ Login to Azure using OIDC (no secrets)
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-        - task: PublishBuildArtifacts@1
-          displayName: "Upload Terraform Plan"
-          inputs:
-            PathtoPublish: '$(workingDir)/tfplan.txt'
-            ArtifactName: 'tfplan'
+      # Step 4️⃣ Terraform fmt
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ${{ env.WORKING_DIR }}
 
-# =====================================
-# STAGE 2: Terraform Apply (CD)
-# =====================================
-- stage: Apply
-  displayName: "Terraform Apply"
-  dependsOn: Plan
-  condition: succeeded()
-  jobs:
-    - deployment: apply
-      displayName: "Terraform Apply to Azure"
-      environment: 'Dev'     # 👈 Optional: use Approvals for UAT/Prod
-      pool:
-        vmImage: 'ubuntu-latest'
+      # Step 5️⃣ Terraform Init
+      - name: Terraform Init
+        run: terraform init -input=false
+        working-directory: ${{ env.WORKING_DIR }}
 
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - checkout: self
+      # Step 6️⃣ Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ${{ env.WORKING_DIR }}
 
-              - task: TerraformInstaller@1
-                displayName: "Install Terraform"
-                inputs:
-                  terraformVersion: $(terraformVersion)
+      # Step 7️⃣ Terraform Plan
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -input=false -no-color -out=tfplan.bin
+        working-directory: ${{ env.WORKING_DIR }}
 
-              - task: DownloadBuildArtifacts@1
-                displayName: "Download Plan Artifact"
-                inputs:
-                  buildType: 'current'
-                  downloadType: 'single'
-                  artifactName: 'tfplan'
-                  downloadPath: '$(workingDir)'
+      # Step 8️⃣ Upload Plan Artifact (for review)
+      - name: Upload Plan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.WORKING_DIR }}/tfplan.bin
 
-              - task: AzureCLI@2
-                displayName: "Terraform Apply"
-                inputs:
-                  azureSubscription: 'My-Azure-Service-Connection'
-                  scriptType: bash
-                  scriptLocation: inlineScript
-                  workingDirectory: $(workingDir)
-                  inlineScript: |
-                    echo "Applying Terraform Plan..."
-                    terraform init -input=false
-                    terraform apply -auto-approve tfplan.binary
+      # Step 9️⃣ Terraform Apply (only on main)
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan.bin
+        working-directory: ${{ env.WORKING_DIR }}
