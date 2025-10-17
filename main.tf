@@ -37,11 +37,11 @@ module "acr" {
 
 # 4️⃣ AKS Cluster
 module "aks" {
-  source          = "./modules/aks"
-  rg_name         = module.rg.name
-  location        = var.location
-  prefix          = var.prefix
-  subnet_id       = module.network.subnet_id
-  acr_id          = module.acr.id
-  tags            = var.tags
+  source    = "./modules/aks"
+  rg_name   = module.rg.name
+  location  = var.location
+  prefix    = var.prefix
+  subnet_id = module.network.subnet_id
+  acr_id    = module.acr.id
+  tags      = var.tags
 }
