@@ -1,12 +1,12 @@
 name: Terraform Infra CI/CD
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
+  # pull_request:
+  #   branches:
+  #     - main
   workflow_dispatch:
 
 permissions:
@@ -23,17 +23,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1️⃣ Checkout repo
+      # Step 1️ Checkout repo
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Step 2️⃣ Setup Terraform
+      # Step 2️ Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      # Step 3️⃣ Login to Azure using OIDC (no secrets)
+      # Step 3️ Login to Azure using OIDC (no secrets)
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
@@ -41,28 +41,28 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Step 4️⃣ Terraform fmt
+      # Step 4️ Terraform fmt
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
         working-directory: ${{ env.WORKING_DIR }}
 
-      # Step 5️⃣ Terraform Init
+      # Step 5️ Terraform Init
       - name: Terraform Init
         run: terraform init -input=false
         working-directory: ${{ env.WORKING_DIR }}
 
-      # Step 6️⃣ Terraform Validate
+      # Step 6️ Terraform Validate
       - name: Terraform Validate
         run: terraform validate
         working-directory: ${{ env.WORKING_DIR }}
 
-      # Step 7️⃣ Terraform Plan
+      # Step 7️ Terraform Plan
       - name: Terraform Plan
         id: plan
         run: terraform plan -input=false -no-color -out=tfplan.bin
         working-directory: ${{ env.WORKING_DIR }}
 
-      # Step 8️⃣ Upload Plan Artifact (for review)
+      # Step 8️ Upload Plan Artifact (for review)
       - name: Upload Plan
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,7 +70,7 @@ jobs:
           name: tfplan
           path: ${{ env.WORKING_DIR }}/tfplan.bin
 
-      # Step 9️⃣ Terraform Apply (only on main)
+      # Step 9️ Terraform Apply (only on main)
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve tfplan.bin
