@@ -48,7 +48,8 @@ jobs:
 
       # Step 5️ Terraform Init
       - name: Terraform Init
-        run: terraform init -input=false
+        # run: terraform init -input=false
+        run: terraform init -upgrade -input=false
         working-directory: ${{ env.WORKING_DIR }}
 
       # Step 6️ Terraform Validate
