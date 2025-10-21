@@ -15,6 +15,13 @@ resource "azurerm_kubernetes_cluster" "this" {
     type = "SystemAssigned"
   }
 
+  network_profile {
+    network_plugin = "azure"
+    network_policy = "azure"
+    service_cidr   = "10.240.0.0/16" # Non-overlapping CIDR
+    dns_service_ip = "10.240.0.10"   # Inside service_cidr
+    # docker_bridge_cidr = "172.17.0.1/16"     # Must not overlap with subnet/VNet
+  }
   # Attach ACR to AKS (for image pulls)
   depends_on = [var.acr_id]
 
