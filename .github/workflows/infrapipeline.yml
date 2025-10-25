@@ -40,7 +40,7 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-            # Step 3.1️ Export Azure credentials for Terraform
+      # Step 3.1️ Export Azure credentials for Terraform
       - name: Set Terraform Azure OIDC environment variables
         run: |
           echo "ARM_USE_OIDC=true" >> $GITHUB_ENV
@@ -84,3 +84,28 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve tfplan.bin
         working-directory: ${{ env.WORKING_DIR }}
+  deploy:
+    name: Deploy to AKS
+    runs-on: ubuntu-latest
+    needs: terraform
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set AKS context
+        run: |
+          az aks get-credentials \
+            --resource-group terraform-rg \
+            --name demoaks-aks \
+            --overwrite-existing
+
+      - name: Deploy Flask app to AKS
+        run: |
+          kubectl apply -f deployment.yaml
