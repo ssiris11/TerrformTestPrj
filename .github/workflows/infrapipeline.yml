@@ -102,7 +102,7 @@ jobs:
       - name: Set AKS context
         run: |
           az aks get-credentials \
-            --resource-group terraform-rg \
+            --resource-group demoaks-rg \
             --name demoaks-aks \
             --overwrite-existing
 
