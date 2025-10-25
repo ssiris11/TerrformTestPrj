@@ -109,4 +109,4 @@ jobs:
       - name: Deploy Flask app to AKS
         working-directory: ./my-flask-app
         run: |
-          kubectl apply -f deployment.yaml
+          kubectl apply -f deployement.yaml
