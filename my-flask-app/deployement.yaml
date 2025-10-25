@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: myflaskapp
-          image: demoaksacr01.azurecr.io/dev:v1
+          image: demoaksacr01.azurecr.io/dev/myflaskapp:v1
           ports:
             - containerPort: 5000
 ---

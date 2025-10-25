@@ -1,0 +1,66 @@
+name: Build & Deploy Flask app to AKS
+
+on:
+  push:
+    paths:
+      - "my-flask-app/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: demoaksacr01              # 🔁 your ACR name
+  AKS_CLUSTER: demoaks-aks              # 🔁 your AKS cluster name
+  AKS_RG: demoaks-rg                  # 🔁 your AKS resource group
+  IMAGE_NAME: myflaskapp
+  IMAGE_TAG: v${{ github.run_number }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️ Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️Login to Azure using OIDC
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # 3️Azure Container Registry Login
+      - name: ACR Login
+        run: az acr login --name $ACR_NAME
+
+      # 4️ Build and push image to ACR
+      - name: Build and push image
+        run: |
+            cd my-flask-app
+            docker build -t $ACR_NAME.azurecr.io/dev/$IMAGE_NAME:$IMAGE_TAG .
+            docker push $ACR_NAME.azurecr.io/dev/$IMAGE_NAME:$IMAGE_TAG
+
+      # 5️ Get AKS credentials
+      - name: Get AKS credentials
+        run: az aks get-credentials --resource-group $AKS_RG --name $AKS_CLUSTER --overwrite-existing
+
+      # 6️⃣ Update image tag inside deployment.yaml dynamically
+      - name: Update image tag in deployment.yaml
+        working-directory: ./my-flask-app
+        run: |
+          echo "Updating deployment.yaml with new image tag..."
+          sed -i "s|image: .*|image: $ACR_NAME.azurecr.io/dev/$IMAGE_NAME:$IMAGE_TAG|g" deployement.yaml
+          echo "Updated deployment.yaml content:"
+          grep "image:" deployement.yaml
+
+      # 7️⃣ Deploy to AKS using updated YAML
+      - name: Apply updated deployment to AKS
+        working-directory: ./my-flask-app
+        run: |
+          kubectl apply -f deployement.yaml
+          kubectl rollout status deployment/myflaskapp
