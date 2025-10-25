@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myflaskapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myflaskapp
+  template:
+    metadata:
+      labels:
+        app: myflaskapp
+    spec:
+      containers:
+        - name: myflaskapp
+          image: demoaksacr01.azurecr.io/dev:v1
+          ports:
+            - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myflaskapp
+spec:
+  type: LoadBalancer
+  selector:
+    app: myflaskapp
+  ports:
+    - port: 80
+      targetPort: 5000
