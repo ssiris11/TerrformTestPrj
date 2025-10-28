@@ -4,6 +4,5 @@
 .terraform/
 .terraform.lock.hcl
 crash.log
-*.tfvars
 *.pem
 *.key
