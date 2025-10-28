@@ -22,8 +22,11 @@ resource "azurerm_kubernetes_cluster" "this" {
     dns_service_ip = "10.240.0.10"   # Inside service_cidr
     # docker_bridge_cidr = "172.17.0.1/16"     # Must not overlap with subnet/VNet
   }
-  # Attach ACR to AKS (for image pulls)
-  depends_on = [var.acr_id]
+  # 👇 Ensure ACR and subnet are both created before AKS
+  depends_on = [
+    var.acr_id,
+    var.subnet_id
+  ]
 
   tags = var.tags
 }
