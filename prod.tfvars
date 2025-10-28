@@ -1,5 +1,5 @@
 prefix   = "prodaks"
-location = "northeurope"
+location = "westeurope"
 tags = {
   project = "terraform-aks"
   env     = "prod"
