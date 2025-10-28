@@ -1,13 +1,17 @@
 name: Terraform Infra CI/CD
 
 on:
-  # push:
-  #   branches:
-  #     - main
-  # pull_request:
-  #   branches:
-  #     - main
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select environment to deploy (dev or prod)"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+
 
 permissions:
   id-token: write    # Required for OIDC login to Azure
@@ -57,7 +61,7 @@ jobs:
       # Step 5️ Terraform Init
       - name: Terraform Init
         # run: terraform init -input=false
-        run: terraform init -upgrade -input=false
+        run: terraform init -upgrade -input=false -backend-config="key=aks-${{ github.event.inputs.environment }}.tfstate"
         working-directory: ${{ env.WORKING_DIR }}
 
       # Step 6️ Terraform Validate
@@ -68,7 +72,7 @@ jobs:
       # Step 7️ Terraform Plan
       - name: Terraform Plan
         id: plan
-        run: terraform plan -input=false -no-color -out=tfplan.bin
+        run: terraform plan -input=false -no-color -out=tfplan.bin -var-file="${{ github.event.inputs.environment }}.tfvars"
         working-directory: ${{ env.WORKING_DIR }}
 
       # Step 8️ Upload Plan Artifact (for review)
@@ -81,7 +85,6 @@ jobs:
 
       # Step 9️ Terraform Apply (only on main)
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve tfplan.bin
         working-directory: ${{ env.WORKING_DIR }}
   # deploy:
