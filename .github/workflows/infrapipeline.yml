@@ -72,7 +72,7 @@ jobs:
       # Step 7️ Terraform Plan
       - name: Terraform Plan
         id: plan
-        run: terraform plan -input=false -no-color -out=tfplan.bin -var-file="${{ github.event.inputs.environment }}.tfvars"
+        run: terraform plan -input=false -no-color -out=tfplan.bin -var-file="./${{ github.event.inputs.environment }}.tfvars"
         working-directory: ${{ env.WORKING_DIR }}
 
       # Step 8️ Upload Plan Artifact (for review)
