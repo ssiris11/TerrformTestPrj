@@ -1,7 +1,7 @@
 name: Build & Deploy Flask app to AKS
 
 on:
-  push:
+  # push:
     # paths:
     #   - "my-flask-app/**"
   workflow_dispatch:
