@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Select environment to deploy (dev or prod)"
+        description: "Select environment to deploy cherry pick test(dev or prod)"
         required: true
         default: "dev"
         type: choice
